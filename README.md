@@ -1,14 +1,14 @@
-# Termicol - Add colors and styles to your terminal
+# Termicol - Colors and styles for your Terminal
 
 ----WIP----
 
-A single header, easy to use, cross platform C++ library to add **color** and **style** attributes to your terminal using `std::cout`.
+A single header, easy to use, cross platform C++ library to add **color** and **style** attributes to your Terminal with `std::cout`.
 
-It’s working on Windows, macOS and Linux with all known terminal application (CMD, bash, sh, zsh, ...).
+It’s working on Windows, macOS and Linux with all known Terminal application (CMD, bash, sh, zsh, ...).
 
 ## Features
 * No configuration required. Simply add the color/style to your `std::cout` statement.
-* Autodetects terminal capabilities
+* Autodetects Terminal capabilities
 * Foreground and background text color
 * Various text stylings like **bold**, *italics*, blinking, inverted, ...
 

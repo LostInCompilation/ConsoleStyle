@@ -1,2 +1,6 @@
-.DSStores
+.DS_Store
+Example
+*.dSYM
 
+# Remove after WIP done
+RM_template.md
