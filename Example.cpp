@@ -37,14 +37,12 @@
 // Include the header. Nothing else is required to use the lib
 #include "ConsoleStyle.h"
 
-using namespace CS;
+using namespace cstyle;
 
 int main(int argc, char* argv[])
 {
     std::cout << "Hello World!" << std::endl;
-    
-    ConsoleStyle::foo();
-    cstyle::foo();
+    std::cout << styleattr::myattr << 42 << std::endl;
     
     return 0;
 }

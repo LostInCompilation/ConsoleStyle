@@ -28,22 +28,67 @@
  
 */
 
-namespace CS
+#ifndef CONSOLE_STYLE_DOT_H
+#define CONSOLE_STYLE_DOT_H
+
+namespace ConsoleStyle
 {
-    class ConsoleStyle final
+    //***********************************************************************
+    // Color and style attributes
+    enum class styleattr : uint8_t
     {
-    private:
-        
-    public:
-        ConsoleStyle() = delete;
-        ~ConsoleStyle() = delete;
-        
-        ConsoleStyle(const ConsoleStyle&) = delete;
-        void operator=(const ConsoleStyle&) = delete;
-        
-        static void foo() {}
+        myattr,
+        myattr2
     };
 
-    // Shorter name
-    using cstyle = ConsoleStyle;
+    //***********************************************************************
+    // Concept for all ConsoleStyle attributes (colors, styles)
+    template <typename T>
+    concept IsConsoleStyleAttribute = std::is_same_v<T, styleattr>;
+
+    //***********************************************************************
+    // IMPL
+    class ConsoleStyleImpl final
+    {
+    private:
+        int myPriv = 0;
+        
+    public:
+        ConsoleStyleImpl() = default;
+        ~ConsoleStyleImpl() = default;
+        
+        // Non copyable
+        ConsoleStyleImpl(const ConsoleStyleImpl&) = delete;
+        void operator=(const ConsoleStyleImpl&) = delete;
+        
+        // Singleton instance
+        static ConsoleStyleImpl& GetInstance()
+        {
+            static ConsoleStyleImpl me;
+            return me;
+        }
+        
+        void foo() {}
+        
+        template <IsConsoleStyleAttribute T>
+        friend std::ostream& operator<<(std::ostream& os, const T& attribute);
+    };
+
+    //***********************************************************************
+    // std::ostream operator overload
+    template <IsConsoleStyleAttribute T>
+    inline std::ostream& operator<<(std::ostream& os, const T& attribute)
+    {
+        ConsoleStyleImpl::GetInstance().myPriv = 42;
+        ConsoleStyleImpl::GetInstance().foo();
+        
+        os << "Overload called: ";
+        return os;
+    }
+
 }
+
+// Shorter name
+namespace cstyle = ConsoleStyle;
+
+#endif
