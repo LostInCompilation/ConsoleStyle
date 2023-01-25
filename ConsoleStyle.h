@@ -1,6 +1,6 @@
 /*
  
- Termicol - Colors and styles for your Terminal
+ ConsoleStyle - Colors and styles for your Terminal
  
  ***********************************************************************************
  The zlib License
@@ -28,21 +28,22 @@
  
 */
 
-namespace TC
+namespace CS
 {
-    class Termicol final
+    class ConsoleStyle final
     {
     private:
         
     public:
-        Termicol() = delete;
-        ~Termicol() = delete;
-        Termicol(const Termicol&) = delete;
+        ConsoleStyle() = delete;
+        ~ConsoleStyle() = delete;
         
+        ConsoleStyle(const ConsoleStyle&) = delete;
+        void operator=(const ConsoleStyle&) = delete;
         
         static void foo() {}
     };
 
     // Shorter name
-    using tcol = Termicol;
+    using cstyle = ConsoleStyle;
 }

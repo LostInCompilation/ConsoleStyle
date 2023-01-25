@@ -1,8 +1,8 @@
-# Termicol - Colors and styles for your Terminal
+# ConsoleStyle - Colors and styles for your Terminal
 
 ----WIP----
 
-A single header, easy to use, cross platform C++ library to add **color** and **style** attributes to your Terminal with `std::cout`.
+A single header, easy to use, cross platform C++ library to add **color** and **style** attributes to your Terminal using `std::cout`.
 
 It’s working on Windows, macOS and Linux with all known Terminal application (CMD, bash, sh, zsh, ...).
 
@@ -14,15 +14,15 @@ It’s working on Windows, macOS and Linux with all known Terminal application (
 
 
 ## Usage
-Include the `Termicol.h` header. Requires C++????.
+Include the `ConsoleStyle.h` header. Requires C++????.
 
 ```cpp
-#include "Termicol.h"
+#include "ConsoleStyle.h"
 ```
 
 ## Available colors and styles
-##### Colors
+#### Colors
 color
 
-##### Styles
+#### Styles
 style

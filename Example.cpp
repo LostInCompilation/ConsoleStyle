@@ -2,7 +2,7 @@
  
  EXAMPLE
  
- Termicol - Colors and styles for your Terminal
+ ConsoleStyle - Colors and styles for your Terminal
  
  ***********************************************************************************
  The zlib License
@@ -30,19 +30,21 @@
  
 */
 
+// Compile: g++ -std=c++20 -o Example Example.cpp -fsanitize=address -static-libsan -g
+
 #include <iostream>
 
 // Include the header. Nothing else is required to use the lib
-#include "Termicol.h"
+#include "ConsoleStyle.h"
 
-//using namespace TC;
+using namespace CS;
 
 int main(int argc, char* argv[])
 {
     std::cout << "Hello World!" << std::endl;
     
-    TC::Termicol::foo();
-    TC::tcol::foo();
+    ConsoleStyle::foo();
+    cstyle::foo();
     
     return 0;
 }
