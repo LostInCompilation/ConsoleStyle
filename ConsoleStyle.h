@@ -50,25 +50,91 @@
 
 namespace ConsoleStyle
 {
+    class Modifier;
+
     //***********************************************************************
     // Color and style attributes
-    enum class styleattr : uint8_t
+    enum class style : uint8_t
     {
-        myattr,
-        myattr2
+        reset   = 0,
+        
+        // No change
+        none    = 255
+    };
+
+    // Foreground color
+    enum class fg : uint8_t
+    {
+        // Normal intensity
+        black   = 30,
+        red     = 31,
+        green   = 32,
+        yellow  = 33,
+        blue    = 34,
+        magenta = 35,
+        cyan    = 36,
+        gray    = 37,
+        
+        // Bright intensity
+        black_b   = 90,
+        red_b     = 91,
+        green_b   = 92,
+        yellow_b  = 93,
+        blue_b    = 94,
+        magenta_b = 95,
+        cyan_b    = 96,
+        white    = 97,
+        
+        // Reset
+        reset   = 39,
+        
+        // No change
+        none    = 255
+    };
+
+    // Background color
+    enum class bg : uint8_t
+    {
+        // Normal intensity
+        black   = 40,
+        red     = 41,
+        green   = 42,
+        yellow  = 43,
+        blue    = 44,
+        magenta = 45,
+        cyan    = 46,
+        gray    = 47,
+        
+        // Bright intensity
+        black_b   = 100,
+        red_b     = 101,
+        green_b   = 102,
+        yellow_b  = 103,
+        blue_b    = 104,
+        magenta_b = 105,
+        cyan_b    = 106,
+        white    = 107,
+        
+        // Reset
+        reset   = 49,
+        
+        // No change
+        none    = 255
     };
 
     //***********************************************************************
-    // Concept for all ConsoleStyle attributes (colors, styles)
+    // Concept for all ConsoleStyle attributes (colors, styles) and a combined Modifier
     template <typename T>
-    concept IsConsoleStyleAttribute = std::is_same_v<T, styleattr>;
+    concept IsConsoleStyleAttribute = std::is_same_v<T, style> or std::is_same_v<T, fg> or std::is_same_v<T, bg>;
+
+    template <typename T>
+    concept IsCombinedModifier = std::is_same_v<T, Modifier>;
 
     //***********************************************************************
-    // IMPL
+    // Implementation
     class ConsoleStyleImpl final
     {
     private:
-        int myPriv = 0;
         
     public:
         ConsoleStyleImpl() = default;
@@ -79,32 +145,58 @@ namespace ConsoleStyle
         void operator=(const ConsoleStyleImpl&) = delete;
         
         // Singleton instance
-        static ConsoleStyleImpl& GetInstance()
+        inline static ConsoleStyleImpl& GetInstance()
         {
             static ConsoleStyleImpl me;
             return me;
         }
         
         //***********************************************************************
-        // std::ostream operator overload for color and style attributes
+        // Set attribute
+#ifdef TARGET_OS_MAC
         template <IsConsoleStyleAttribute T>
-        friend std::ostream& operator<<(std::ostream& os, const T& attribute);
-        
-        
-        //***********************************************************************
-        // Debug, will be removed
-#ifdef VERBOSE_DBG
-        void WhichOS()
+        inline std::ostream& SetAttribute(std::ostream& os, const T attribute)
         {
-#if defined(TARGET_OS_UNIX)
-            std::cout << "Running on UNIX/LINUX" << std::endl;
-#elif defined(TARGET_OS_MAC)
-            std::cout << "Running on MACOS" << std::endl;
-#elif defined(TARGET_OS_WIN)
-            std::cout << "Running on WINDOWS" << std::endl;
-#endif
+            if(attribute == T::none) // No change
+                return os;
+            
+            return os << "\033[" << static_cast<int32_t>(attribute) << "m";
         }
 #endif
+        
+        //***********************************************************************
+        // std::ostream operator overload for color and style attributes
+        template <IsConsoleStyleAttribute T>
+        friend inline std::ostream& operator<<(std::ostream& os, const T& attribute);
+        
+        // std::ostream operator overload for Modifier
+        template <IsCombinedModifier T>
+        friend inline std::ostream& operator<<(std::ostream& os, const T& modifier);
+    };
+
+    //***********************************************************************
+    // Modifier to combine color and style attributes into one object
+    class Modifier
+    {
+    private:
+        style   m_Style;
+        fg      m_FG;
+        bg      m_BG;
+        // MAKING CONST? OR SHOULD MODIFIER BE CHANGEABLE?
+        
+    public:
+        Modifier(const fg& _fg = fg::none, const bg& _bg = bg::none, const style& _style = style::none)
+            : m_Style(_style)
+            , m_FG(_fg)
+            , m_BG(_bg)
+        {}
+        
+        
+        
+        // CONSIDER USING GETTER/SETTER?
+        // std::ostream operator overload for Modifier
+        template <IsCombinedModifier T>
+        friend inline std::ostream& operator<<(std::ostream& os, const T& modifier);
     };
 
     //***********************************************************************
@@ -112,8 +204,16 @@ namespace ConsoleStyle
     template <IsConsoleStyleAttribute T>
     inline std::ostream& operator<<(std::ostream& os, const T& attribute)
     {
-        os << "Overload called: "; // Testing
-        return os;
+        return ConsoleStyleImpl::GetInstance().SetAttribute(os, attribute);
+    }
+
+    // std::ostream operator overload for Modifier
+    template <IsCombinedModifier T>
+    inline std::ostream& operator<<(std::ostream& os, const T& modifier)
+    {
+        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.m_Style);
+        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.m_BG);
+        return ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.m_FG);;
     }
 }
 

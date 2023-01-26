@@ -32,22 +32,24 @@
 
 // Compile: g++ -std=c++20 -o Example Example.cpp -fsanitize=address -static-libsan -g
 
-// JUST FOR DEV. REMOVE
-#define VERBOSE_DBG
-
 #include <iostream>
 
 // Include the header. Nothing else is required to use the lib
 #include "ConsoleStyle.h"
 
 using namespace cstyle;
+//using namespace ConsoleStyle; // Equivalent to cstyle
 
 int main(int argc, char* argv[])
 {
     std::cout << "Hello World!" << std::endl;
-    std::cout << styleattr::myattr << 42 << std::endl;
     
-    cstyle::ConsoleStyleImpl::GetInstance().WhichOS();
+    // Simple example
+    std::cout << bg::red << "Attribute" << bg::reset << std::endl;
+    
+    // Modifier example
+    Modifier modifier(fg::red_b, bg::blue, style::reset);
+    std::cout << modifier << "Modifier" << std::endl;
     
     return 0;
 }
