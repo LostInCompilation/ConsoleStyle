@@ -112,9 +112,7 @@ namespace ConsoleStyle
     template <IsConsoleStyleAttribute T>
     inline std::ostream& operator<<(std::ostream& os, const T& attribute)
     {
-        ConsoleStyleImpl::GetInstance().myPriv = 42; // Testing
-        
-        os << "Overload called: ";
+        os << "Overload called: "; // Testing
         return os;
     }
 }
