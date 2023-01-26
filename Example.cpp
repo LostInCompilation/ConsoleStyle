@@ -32,6 +32,9 @@
 
 // Compile: g++ -std=c++20 -o Example Example.cpp -fsanitize=address -static-libsan -g
 
+// JUST FOR DEV. REMOVE
+#define VERBOSE_DBG
+
 #include <iostream>
 
 // Include the header. Nothing else is required to use the lib
@@ -43,6 +46,8 @@ int main(int argc, char* argv[])
 {
     std::cout << "Hello World!" << std::endl;
     std::cout << styleattr::myattr << 42 << std::endl;
+    
+    cstyle::ConsoleStyleImpl::GetInstance().WhichOS();
     
     return 0;
 }

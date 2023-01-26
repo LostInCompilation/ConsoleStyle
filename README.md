@@ -1,6 +1,6 @@
 # ConsoleStyle - Colors and styles for your Terminal
 
-----WIP----
+## ----WIP----
 
 A single header, easy to use, cross platform C++ library to add **color** and **style** attributes to your Terminal using `std::cout`.
 
@@ -14,7 +14,7 @@ It’s working on Windows, macOS and Linux with all known Terminal application (
 
 
 ## Usage
-Include the `ConsoleStyle.h` header. Requires C++????.
+Include the `ConsoleStyle.h` header. Requires C++20.
 
 ```cpp
 #include "ConsoleStyle.h"

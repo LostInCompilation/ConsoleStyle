@@ -31,6 +31,23 @@
 #ifndef CONSOLE_STYLE_DOT_H
 #define CONSOLE_STYLE_DOT_H
 
+//***********************************************************************
+// Determine the target OS
+#ifndef TARGET_OS_FORCE_UNIX
+    #if (__linux__) || (__unix__)  || (__unix)
+        #define TARGET_OS_UNIX
+    #elif (__APPLE__ && __MACH__)
+        #define TARGET_OS_MAC
+    #elif _WIN32 // For Win32 and Win64
+        #define TARGET_OS_WINDOWS
+    #else
+        #error The target OS is unknown or unsupported. If you believe your OS is UNIX compatible, manually define "TARGET_OS_FORCE_UNIX" to skip this check.
+    #endif
+#else
+    #define TARGET_OS_UNIX // User forced to use UNIX
+#endif
+
+
 namespace ConsoleStyle
 {
     //***********************************************************************
@@ -68,27 +85,46 @@ namespace ConsoleStyle
             return me;
         }
         
-        void foo() {}
-        
+        //***********************************************************************
+        // std::ostream operator overload for color and style attributes
         template <IsConsoleStyleAttribute T>
         friend std::ostream& operator<<(std::ostream& os, const T& attribute);
+        
+        
+        //***********************************************************************
+        // Debug, will be removed
+#ifdef VERBOSE_DBG
+        void WhichOS()
+        {
+#if defined(TARGET_OS_UNIX)
+            std::cout << "Running on UNIX/LINUX" << std::endl;
+#elif defined(TARGET_OS_MAC)
+            std::cout << "Running on MACOS" << std::endl;
+#elif defined(TARGET_OS_WIN)
+            std::cout << "Running on WINDOWS" << std::endl;
+#endif
+        }
+#endif
     };
 
     //***********************************************************************
-    // std::ostream operator overload
+    // std::ostream operator overload for color and style attributes
     template <IsConsoleStyleAttribute T>
     inline std::ostream& operator<<(std::ostream& os, const T& attribute)
     {
-        ConsoleStyleImpl::GetInstance().myPriv = 42;
-        ConsoleStyleImpl::GetInstance().foo();
+        ConsoleStyleImpl::GetInstance().myPriv = 42; // Testing
         
         os << "Overload called: ";
         return os;
     }
-
 }
 
 // Shorter name
 namespace cstyle = ConsoleStyle;
+
+// Cleanup our preprocessor OS checks
+#undef TARGET_OS_UNIX
+#undef TARGET_OS_MAC
+#undef TARGET_OS_WINDOWS
 
 #endif
