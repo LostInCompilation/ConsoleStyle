@@ -47,7 +47,6 @@
     #define TARGET_OS_UNIX // User forced to use UNIX
 #endif
 
-
 namespace ConsoleStyle
 {
     class Modifier;
@@ -56,6 +55,10 @@ namespace ConsoleStyle
     // Color and style attributes
     enum class style : uint8_t
     {
+        // Styles
+        test123 = 0,
+        
+        // Reset
         reset   = 0,
         
         // No change
@@ -83,7 +86,7 @@ namespace ConsoleStyle
         blue_b    = 94,
         magenta_b = 95,
         cyan_b    = 96,
-        white    = 97,
+        white     = 97,
         
         // Reset
         reset   = 39,
@@ -113,7 +116,7 @@ namespace ConsoleStyle
         blue_b    = 104,
         magenta_b = 105,
         cyan_b    = 106,
-        white    = 107,
+        white     = 107,
         
         // Reset
         reset   = 49,
@@ -123,7 +126,7 @@ namespace ConsoleStyle
     };
 
     //***********************************************************************
-    // Concept for all ConsoleStyle attributes (colors, styles) and a combined Modifier
+    // Concept for all ConsoleStyle attributes (colors, styles) and a Modifier
     template <typename T>
     concept IsConsoleStyleAttribute = std::is_same_v<T, style> or std::is_same_v<T, fg> or std::is_same_v<T, bg>;
 
@@ -144,7 +147,7 @@ namespace ConsoleStyle
         ConsoleStyleImpl(const ConsoleStyleImpl&) = delete;
         void operator=(const ConsoleStyleImpl&) = delete;
         
-        // Singleton instance
+        // Singleton interface
         inline static ConsoleStyleImpl& GetInstance()
         {
             static ConsoleStyleImpl me;
@@ -152,7 +155,7 @@ namespace ConsoleStyle
         }
         
         //***********************************************************************
-        // Set attribute
+        // Set color or style attribute
 #ifdef TARGET_OS_MAC
         template <IsConsoleStyleAttribute T>
         inline std::ostream& SetAttribute(std::ostream& os, const T attribute)
@@ -162,6 +165,8 @@ namespace ConsoleStyle
             
             return os << "\033[" << static_cast<int32_t>(attribute) << "m";
         }
+#else
+#error No impl. ToDo
 #endif
         
         //***********************************************************************
@@ -182,7 +187,6 @@ namespace ConsoleStyle
         style   m_Style;
         fg      m_FG;
         bg      m_BG;
-        // MAKING CONST? OR SHOULD MODIFIER BE CHANGEABLE?
         
     public:
         Modifier(const fg& _fg = fg::none, const bg& _bg = bg::none, const style& _style = style::none)
@@ -191,13 +195,24 @@ namespace ConsoleStyle
             , m_BG(_bg)
         {}
         
+        template <IsConsoleStyleAttribute T>
+        void Set(const T& attribute)
+        {
+            if constexpr (std::is_same_v<T, fg>)
+                m_FG = attribute;
+            else if constexpr (std::is_same_v<T, bg>)
+                m_BG = attribute;
+            else if constexpr (std::is_same_v<T, style>)
+                m_Style = attribute;
+        }
         
-        
-        // CONSIDER USING GETTER/SETTER?
-        // std::ostream operator overload for Modifier
-        template <IsCombinedModifier T>
-        friend inline std::ostream& operator<<(std::ostream& os, const T& modifier);
+        style   GetStyle()  const { return m_Style; }
+        fg      GetFG()     const { return m_FG; }
+        bg      GetBG()     const { return m_BG; }
     };
+    
+    // Reset-all Modifier
+    static Modifier resetAll(fg::reset, bg::reset, style::reset);
 
     //***********************************************************************
     // std::ostream operator overload for color and style attributes
@@ -211,9 +226,9 @@ namespace ConsoleStyle
     template <IsCombinedModifier T>
     inline std::ostream& operator<<(std::ostream& os, const T& modifier)
     {
-        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.m_Style);
-        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.m_BG);
-        return ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.m_FG);;
+        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetStyle());
+        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetBG());
+        return ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetFG());;
     }
 }
 

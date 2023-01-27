@@ -49,7 +49,11 @@ int main(int argc, char* argv[])
     
     // Modifier example
     Modifier modifier(fg::red_b, bg::blue, style::reset);
-    std::cout << modifier << "Modifier" << std::endl;
+    std::cout << modifier << "Modifier" << style::reset << std::endl;
+    
+    modifier.Set(fg::black);
+    modifier.Set(bg::white);
+    std::cout << modifier << "Second Modifier" << resetAll << std::endl;
     
     return 0;
 }
