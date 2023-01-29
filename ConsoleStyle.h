@@ -47,16 +47,24 @@
     #define TARGET_OS_UNIX // User forced to use UNIX
 #endif
 
+
 namespace ConsoleStyle
 {
     class Modifier;
 
     //***********************************************************************
     // Color and style attributes
-    enum class style : uint8_t
+    enum class STYLE : uint8_t
     {
         // Styles
-        test123 = 0,
+        bold      = 1,
+        faint     = 2,
+        italic    = 3,
+        underline = 4,
+        blink     = 5,
+        invert    = 7,
+        hide      = 8, // Not widely supported
+        strike    = 9,
         
         // Reset
         reset   = 0,
@@ -66,7 +74,7 @@ namespace ConsoleStyle
     };
 
     // Foreground color
-    enum class fg : uint8_t
+    enum class FG : uint8_t
     {
         // Normal intensity
         black   = 30,
@@ -96,7 +104,7 @@ namespace ConsoleStyle
     };
 
     // Background color
-    enum class bg : uint8_t
+    enum class BG : uint8_t
     {
         // Normal intensity
         black   = 40,
@@ -126,9 +134,19 @@ namespace ConsoleStyle
     };
 
     //***********************************************************************
+    // Capability modes
+    enum class CapabilityMode : uint8_t
+    {
+        Disable   = 0,
+        CheckOnce = 1,
+        Auto      = 2,
+        Force     = 3
+    };
+
+    //***********************************************************************
     // Concept for all ConsoleStyle attributes (colors, styles) and a Modifier
     template <typename T>
-    concept IsConsoleStyleAttribute = std::is_same_v<T, style> or std::is_same_v<T, fg> or std::is_same_v<T, bg>;
+    concept IsConsoleStyleAttribute = std::is_same_v<T, STYLE> or std::is_same_v<T, FG> or std::is_same_v<T, BG>;
 
     template <typename T>
     concept IsCombinedModifier = std::is_same_v<T, Modifier>;
@@ -138,6 +156,37 @@ namespace ConsoleStyle
     class ConsoleStyleImpl final
     {
     private:
+        bool           m_GotCapabilityConfig = false;
+        CapabilityMode m_Mode = CapabilityMode::Auto;
+        
+        
+        
+        inline bool IsA_Pty_Win(int fd) const noexcept
+        {
+            return false;
+        }
+        
+        inline bool IsA_tty_OS(int fd) const noexcept
+        {
+            return false;
+        }
+        
+        //***********************************************************************
+        // Is output a terminal
+        inline bool IsTerminalOutput(const std::streambuf* const sbuf) const noexcept
+        {
+            if(sbuf == std::cout.rdbuf())
+            {
+                
+            }
+            else if(sbuf == std::cerr.rdbuf() || sbuf == std::clog.rdbuf())
+            {
+                
+            }
+            
+            return false;
+        }
+        
         
     public:
         ConsoleStyleImpl() = default;
@@ -148,10 +197,15 @@ namespace ConsoleStyle
         void operator=(const ConsoleStyleImpl&) = delete;
         
         // Singleton interface
-        inline static ConsoleStyleImpl& GetInstance()
+        inline static ConsoleStyleImpl& GetInstance() noexcept
         {
             static ConsoleStyleImpl me;
             return me;
+        }
+        
+        void SetCapabilityMode(const CapabilityMode& mode) noexcept
+        {
+            m_Mode = mode;
         }
         
         //***********************************************************************
@@ -184,35 +238,35 @@ namespace ConsoleStyle
     class Modifier
     {
     private:
-        style   m_Style;
-        fg      m_FG;
-        bg      m_BG;
+        STYLE   m_Style;
+        FG      m_FG;
+        BG      m_BG;
         
     public:
-        Modifier(const fg& _fg = fg::none, const bg& _bg = bg::none, const style& _style = style::none)
-            : m_Style(_style)
-            , m_FG(_fg)
-            , m_BG(_bg)
+        Modifier(const FG& fg = FG::none, const BG& bg = BG::none, const STYLE& style = STYLE::none)
+            : m_Style(style)
+            , m_FG(fg)
+            , m_BG(bg)
         {}
         
         template <IsConsoleStyleAttribute T>
-        void Set(const T& attribute)
+        inline void Set(const T& attribute) noexcept
         {
-            if constexpr (std::is_same_v<T, fg>)
+            if constexpr (std::is_same_v<T, FG>)
                 m_FG = attribute;
-            else if constexpr (std::is_same_v<T, bg>)
+            else if constexpr (std::is_same_v<T, BG>)
                 m_BG = attribute;
-            else if constexpr (std::is_same_v<T, style>)
+            else if constexpr (std::is_same_v<T, STYLE>)
                 m_Style = attribute;
         }
         
-        style   GetStyle()  const { return m_Style; }
-        fg      GetFG()     const { return m_FG; }
-        bg      GetBG()     const { return m_BG; }
+        inline STYLE GetStyle() const noexcept { return m_Style; }
+        inline FG    GetFG()    const noexcept { return m_FG; }
+        inline BG    GetBG()    const noexcept { return m_BG; }
     };
     
     // Reset-all Modifier
-    static Modifier resetAll(fg::reset, bg::reset, style::reset);
+    static Modifier resetAll(FG::reset, BG::reset, STYLE::reset);
 
     //***********************************************************************
     // std::ostream operator overload for color and style attributes

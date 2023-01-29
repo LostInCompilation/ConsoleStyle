@@ -42,17 +42,17 @@ using namespace cstyle;
 
 int main(int argc, char* argv[])
 {
-    std::cout << "Hello World!" << std::endl;
+    std::cout << "Hello World!" << std::endl << "Env: " << std::getenv("TERM") << std::endl;
     
     // Simple example
-    std::cout << bg::red << "Attribute" << bg::reset << std::endl;
+    std::cout << BG::red << "Attribute" << BG::reset << std::endl;
     
     // Modifier example
-    Modifier modifier(fg::red_b, bg::blue, style::reset);
-    std::cout << modifier << "Modifier" << style::reset << std::endl;
+    Modifier modifier(FG::red_b, BG::blue, STYLE::strike);
+    std::cout << modifier << "Modifier" << STYLE::reset << std::endl;
     
-    modifier.Set(fg::black);
-    modifier.Set(bg::white);
+    modifier.Set(FG::black);
+    modifier.Set(BG::white);
     std::cout << modifier << "Second Modifier" << resetAll << std::endl;
     
     return 0;
