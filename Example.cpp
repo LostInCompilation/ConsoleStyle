@@ -40,46 +40,47 @@
 using namespace cstyle;
 //using namespace ConsoleStyle; // Equivalent to cstyle
 
-void TestUnsetEnvTerm()
+void TestFallbackNoEnv()
 {
 #ifdef TARGET_OS_WINDOWS
     return; // Not supported on Windows
 #else
+    std::cout << FG::green_b << "Fallback test: Colors should work" << FG::reset << std::endl;
+    
     const auto env = std::getenv("TERM");
     
     if(env)
-    {
-        std::cout << "Unset $PATH: " << env << std::endl;
         unsetenv("TERM");
-    }
     
-    std::cout << BG::red << "Fallback test. No colors" << BG::reset << std::endl;
+    std::cout << BG::red << "Fallback test: Colors should not work. Only text printed with Auto mode" << BG::reset << std::endl << std::endl;
     
     if(env)
-    {
-        std::cout << "Set $PATH: " << env << std::endl;
         setenv("TERM", env, 1);
-    }
 #endif
 }
 
-int main(int argc, char* argv[])
+int main()
 {
-    TestUnsetEnvTerm();
-    SetConsoleCapabilityMode(CapabilityMode::Auto);
+    SetConsoleCapabilityMode(CapabilityMode::CheckOnce); // Default: Auto
     
-    std::cout << "Hello World!" << std::endl << "Env: " << std::getenv("TERM") << std::endl;
-    
+    //***********************************************************************
     // Simple example
-    std::cout << BG::red << "Attribute" << BG::reset << std::endl;
+    std::cout << BG::red << "BG Attribute" << BG::reset << std::endl << std::endl;
     
+    //***********************************************************************
     // Modifier example
     Modifier modifier(FG::red_b, BG::blue, STYLE::strike);
-    std::cout << modifier << "Modifier" << STYLE::reset << std::endl;
+    std::cout << modifier << "First Modifier" << STYLE::reset << std::endl << std::endl;
     
     modifier.Set(FG::black);
     modifier.Set(BG::white);
-    std::cout << modifier << "Second Modifier" << resetAll << std::endl;
+    modifier.Set(STYLE::underline);
+    std::cout << modifier << "Second Modifier" << resetAll << std::endl << std::endl;
+    
+    //***********************************************************************
+    // Fallback test
+    SetConsoleCapabilityMode(CapabilityMode::Auto);
+    TestFallbackNoEnv();
     
     return 0;
 }

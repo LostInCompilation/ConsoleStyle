@@ -47,7 +47,18 @@
     #define TARGET_OS_UNIX // User forced to use UNIX
 #endif
 
+#include <iostream>
+#include <atomic>
 #include <mutex>
+
+// OS specific includes
+#ifdef TARGET_OS_WINDOWS
+//#include <windows.h>
+//#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 
 namespace ConsoleStyle
 {
@@ -157,8 +168,13 @@ namespace ConsoleStyle
     class ConsoleCapabilities final
     {
     private:
-        std::atomic<bool>   m_GotCapabilityInfo = false;
-        std::mutex          m_CapabilitiesMutex;
+        std::atomic<bool>   m_GotCapabilityInfoIsTerminal = false;
+        std::atomic<bool>   m_GotCapabilityInfoStylesSupported = false;
+        
+        std::atomic<bool>   m_IsTerminalOutput = false;
+        std::atomic<bool>   m_AreStylesSupported = false;
+        
+        //std::mutex          m_CapabilitiesMutex;
         
         inline int Fileno_OS(FILE* const file) const noexcept
         {
@@ -171,12 +187,16 @@ namespace ConsoleStyle
         
         inline bool Is_pty_Win(int fd) const noexcept
         {
-            return false;
+            //return false; // Warn me for ToDo
         }
         
         inline bool Is_tty_OS(int fd) const noexcept
         {
-            return false;
+#ifdef TARGET_OS_WINDOWS
+            return _isatty(fd);
+#else
+            return isatty(fd);
+#endif
         }
         
         //***********************************************************************
@@ -191,22 +211,36 @@ namespace ConsoleStyle
             else if(sbuf == std::cerr.rdbuf() || sbuf == std::clog.rdbuf())
                 fd = Fileno_OS(stderr);
             
-            bool istty = (Is_tty_OS(fd) != 0);
+            bool isTerminal = (Is_tty_OS(fd) != 0);
             
 #ifdef TARGET_OS_WINDOWS
             // Additional check for Pty/Msys on Windows
-            if(!istty)
-                istty |= Is_pty_Win(fd);
+            if(!isTerminal)
+                isTerminal = Is_pty_Win(fd);
 #endif
             
-            return istty;
+            return isTerminal;
         }
         
         //***********************************************************************
         // Are styles and colors supported
         inline bool AreStylesSupported() const noexcept
         {
-            return false;
+#ifdef TARGET_OS_WINDOWS
+            return true; // Windows always supports colors and (some) styles
+#else
+            static const char* const knownTerminals[] = {
+                "ansi", "color", "console", "konsole",
+                "linux", "gnome", "msys", "cygwin", "xterm", "kterm",
+                "putty", "screen", "vt100", "rxvt" };
+            
+            const char* const env = std::getenv("TERM");
+            if(!env)
+                return false;
+            
+            return std::any_of(std::begin(knownTerminals), std::end(knownTerminals),
+                               [&](const char* const terminal) { return std::strstr(env, terminal) != nullptr; });
+#endif
         }
         
     public:
@@ -216,6 +250,45 @@ namespace ConsoleStyle
         // Non copyable
         ConsoleCapabilities(const ConsoleCapabilities&) = delete;
         void operator=(const ConsoleCapabilities&) = delete;
+        
+        //***********************************************************************
+        // Check and store capabilities
+        inline bool CheckIsTerminalOutput(const std::streambuf* const sbuf) noexcept
+        {
+            m_IsTerminalOutput = IsTerminalOutput(sbuf);
+            m_GotCapabilityInfoIsTerminal = true;
+            
+            return m_IsTerminalOutput;
+        }
+        
+        inline bool CheckAreStylesSupported() noexcept
+        {
+            m_AreStylesSupported = AreStylesSupported();
+            m_GotCapabilityInfoStylesSupported = true;
+            
+            return m_AreStylesSupported;
+        }
+        
+        //***********************************************************************
+        // Get stored capabilities
+        inline bool GetIsTerminalOutput() const noexcept { return m_IsTerminalOutput; }
+        inline bool GetAreStylesSupported() const noexcept { return m_AreStylesSupported; }
+        
+        // Did we check IsTerminalOutput and AreStylesSupported at least once?
+        inline bool GotCapabilityInfo() const noexcept
+        {
+            return m_GotCapabilityInfoIsTerminal && m_GotCapabilityInfoStylesSupported;
+        }
+        
+        //***********************************************************************
+        // Reset stored capabilities and if they were checked at least once
+        inline void ResetCapabilityInfo() noexcept
+        {
+            m_GotCapabilityInfoIsTerminal = false;
+            m_GotCapabilityInfoStylesSupported = false;
+            m_IsTerminalOutput = false;
+            m_AreStylesSupported = false;
+        }
     };
 
     //***********************************************************************
@@ -246,22 +319,36 @@ namespace ConsoleStyle
         // Check capabilities (if necessary and configured)
         bool CheckCapabilities(const std::streambuf* const sbuf) noexcept
         {
+            // ToDO: Thread safety
+            
             if(m_Mode == CapabilityMode::Disable)
                 return false;
             if(m_Mode == CapabilityMode::Force)
                 return true;
             
-            // Check only once on the first usage
+            // Check only once on the first usage (faster, but doesn't catch changing output streams)
             if(m_Mode == CapabilityMode::CheckOnce)
             {
-                
+                // Have we already checked?
+                if(m_Capabilities.GotCapabilityInfo())
+                {
+                    // Already checked, get stored results
+                    return (m_Capabilities.GetAreStylesSupported() && m_Capabilities.GetIsTerminalOutput());
+                }
+                else
+                {
+                    // Never checked. Explicitly call both functions to store both results
+                    const bool a = m_Capabilities.CheckAreStylesSupported();
+                    const bool b = m_Capabilities.CheckIsTerminalOutput(sbuf);
+                    
+                    return (a && b);
+                }
             }
             
             // Auto: Check on every call (slower)
             if(m_Mode == CapabilityMode::Auto)
             {
-                // AreStylesSupported
-                // IsTerminalOutput
+                return (m_Capabilities.CheckAreStylesSupported() && m_Capabilities.CheckIsTerminalOutput(sbuf));
             }
             
             return false;
@@ -270,6 +357,8 @@ namespace ConsoleStyle
         // Setting the capability mode
         void SetCapabilityMode(const CapabilityMode& mode) noexcept
         {
+            // Changing the mode requires to clear stored capability info
+            m_Capabilities.ResetCapabilityInfo();
             m_Mode = mode;
         }
         
@@ -279,6 +368,8 @@ namespace ConsoleStyle
         template <IsConsoleStyleAttribute T>
         inline std::ostream& SetAttribute(std::ostream& os, const T attribute)
         {
+            // ToDO: Thread safety
+            
             if(attribute == T::none) // No change
                 return os;
             
