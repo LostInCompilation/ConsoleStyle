@@ -40,8 +40,34 @@
 using namespace cstyle;
 //using namespace ConsoleStyle; // Equivalent to cstyle
 
+void TestUnsetEnvTerm()
+{
+#ifdef TARGET_OS_WINDOWS
+    return; // Not supported on Windows
+#else
+    const auto env = std::getenv("TERM");
+    
+    if(env)
+    {
+        std::cout << "Unset $PATH: " << env << std::endl;
+        unsetenv("TERM");
+    }
+    
+    std::cout << BG::red << "Fallback test. No colors" << BG::reset << std::endl;
+    
+    if(env)
+    {
+        std::cout << "Set $PATH: " << env << std::endl;
+        setenv("TERM", env, 1);
+    }
+#endif
+}
+
 int main(int argc, char* argv[])
 {
+    TestUnsetEnvTerm();
+    SetConsoleCapabilityMode(CapabilityMode::Auto);
+    
     std::cout << "Hello World!" << std::endl << "Env: " << std::getenv("TERM") << std::endl;
     
     // Simple example

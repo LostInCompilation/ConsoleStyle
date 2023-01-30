@@ -47,6 +47,7 @@
     #define TARGET_OS_UNIX // User forced to use UNIX
 #endif
 
+#include <mutex>
 
 namespace ConsoleStyle
 {
@@ -153,20 +154,27 @@ namespace ConsoleStyle
 
     //***********************************************************************
     // Implementation
-    class ConsoleStyleImpl final
+    class ConsoleCapabilities final
     {
     private:
-        bool           m_GotCapabilityConfig = false;
-        CapabilityMode m_Mode = CapabilityMode::Auto;
+        std::atomic<bool>   m_GotCapabilityInfo = false;
+        std::mutex          m_CapabilitiesMutex;
         
+        inline int Fileno_OS(FILE* const file) const noexcept
+        {
+#ifdef TARGET_OS_WINDOWS
+            return _fileno(file);
+#else
+            return fileno(file);
+#endif
+        }
         
-        
-        inline bool IsA_Pty_Win(int fd) const noexcept
+        inline bool Is_pty_Win(int fd) const noexcept
         {
             return false;
         }
         
-        inline bool IsA_tty_OS(int fd) const noexcept
+        inline bool Is_tty_OS(int fd) const noexcept
         {
             return false;
         }
@@ -175,17 +183,48 @@ namespace ConsoleStyle
         // Is output a terminal
         inline bool IsTerminalOutput(const std::streambuf* const sbuf) const noexcept
         {
-            if(sbuf == std::cout.rdbuf())
-            {
-                
-            }
-            else if(sbuf == std::cerr.rdbuf() || sbuf == std::clog.rdbuf())
-            {
-                
-            }
+            int fd = -1;
             
+            // Get file descriptor
+            if(sbuf == std::cout.rdbuf())
+                fd = Fileno_OS(stdout);
+            else if(sbuf == std::cerr.rdbuf() || sbuf == std::clog.rdbuf())
+                fd = Fileno_OS(stderr);
+            
+            bool istty = (Is_tty_OS(fd) != 0);
+            
+#ifdef TARGET_OS_WINDOWS
+            // Additional check for Pty/Msys on Windows
+            if(!istty)
+                istty |= Is_pty_Win(fd);
+#endif
+            
+            return istty;
+        }
+        
+        //***********************************************************************
+        // Are styles and colors supported
+        inline bool AreStylesSupported() const noexcept
+        {
             return false;
         }
+        
+    public:
+        ConsoleCapabilities() = default;
+        ~ConsoleCapabilities() = default;
+
+        // Non copyable
+        ConsoleCapabilities(const ConsoleCapabilities&) = delete;
+        void operator=(const ConsoleCapabilities&) = delete;
+    };
+
+    //***********************************************************************
+    // Implementation
+    class ConsoleStyleImpl final
+    {
+    private:
+        ConsoleCapabilities         m_Capabilities;
+        std::atomic<CapabilityMode> m_Mode = CapabilityMode::Auto;
         
         
     public:
@@ -197,12 +236,38 @@ namespace ConsoleStyle
         void operator=(const ConsoleStyleImpl&) = delete;
         
         // Singleton interface
-        inline static ConsoleStyleImpl& GetInstance() noexcept
+        inline static ConsoleStyleImpl& GetInstance() noexcept // Thread safe in C++11 and above
         {
             static ConsoleStyleImpl me;
             return me;
         }
         
+        //***********************************************************************
+        // Check capabilities (if necessary and configured)
+        bool CheckCapabilities(const std::streambuf* const sbuf) noexcept
+        {
+            if(m_Mode == CapabilityMode::Disable)
+                return false;
+            if(m_Mode == CapabilityMode::Force)
+                return true;
+            
+            // Check only once on the first usage
+            if(m_Mode == CapabilityMode::CheckOnce)
+            {
+                
+            }
+            
+            // Auto: Check on every call (slower)
+            if(m_Mode == CapabilityMode::Auto)
+            {
+                // AreStylesSupported
+                // IsTerminalOutput
+            }
+            
+            return false;
+        }
+        
+        // Setting the capability mode
         void SetCapabilityMode(const CapabilityMode& mode) noexcept
         {
             m_Mode = mode;
@@ -273,16 +338,33 @@ namespace ConsoleStyle
     template <IsConsoleStyleAttribute T>
     inline std::ostream& operator<<(std::ostream& os, const T& attribute)
     {
-        return ConsoleStyleImpl::GetInstance().SetAttribute(os, attribute);
+        if(ConsoleStyleImpl::GetInstance().CheckCapabilities(os.rdbuf()))
+            return ConsoleStyleImpl::GetInstance().SetAttribute(os, attribute);
+        else
+            return os;
     }
 
     // std::ostream operator overload for Modifier
     template <IsCombinedModifier T>
     inline std::ostream& operator<<(std::ostream& os, const T& modifier)
     {
-        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetStyle());
-        ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetBG());
-        return ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetFG());;
+        if(ConsoleStyleImpl::GetInstance().CheckCapabilities(os.rdbuf()))
+        {
+            ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetStyle());
+            ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetBG());
+            return ConsoleStyleImpl::GetInstance().SetAttribute(os, modifier.GetFG());
+        }
+        else
+        {
+            return os;
+        }
+    }
+
+    //***********************************************************************
+    // Functions to interface configs
+    void SetConsoleCapabilityMode(const CapabilityMode& mode) noexcept
+    {
+        ConsoleStyleImpl::GetInstance().SetCapabilityMode(mode);
     }
 }
 
